@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Optimal Flight Route Finder</title>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+:root {
+  --primary: #2563eb;
+  --secondary: #10b981;
+  --accent: #f59e0b;
+  --dark: #1e293b;
+  --light: #f8fafc;
+  --card-bg: rgba(255, 255, 255, 0.1);
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #1e40af 0%, #7e22ce 100%);
+  min-height: 100vh;
+  margin: 0;
+  padding: 20px;
+  color: var(--light);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  padding: 25px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.logo i {
+  font-size: 2.8rem;
+  color: var(--accent);
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(45deg, var(--secondary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 5px;
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+/* Controls */
+.controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 20px;
+  margin-bottom: 30px;
+  align-items: end;
+}
+
+.control-group {
+  position: relative;
+}
+
+.control-label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: var(--light);
+  font-size: 1rem;
+}
+
+.control-label i {
+  margin-right: 10px;
+  color: var(--secondary);
+  font-size: 1.1rem;
+}
+
+.select2-container--default .select2-selection--single {
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 15px;
+  height: 60px;
+  padding: 0 20px;
+  transition: all 0.3s ease;
+}
+
+.select2-container--default .select2-selection--single:hover {
+  border-color: var(--secondary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.2);
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  line-height: 60px;
+  color: var(--light);
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.select2-container--default .select2-selection__arrow {
+  height: 60px;
+  right: 20px;
+}
+
+.select2-results__option {
+  background: rgba(30, 41, 59, 0.98);
+  color: var(--light);
+  padding: 15px 20px;
+  font-size: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.select2-results__option--highlighted {
+  background: var(--secondary) !important;
+  color: var(--dark) !important;
+}
+
+/* Button */
+.find-btn {
+  background: linear-gradient(135deg, var(--secondary), var(--primary));
+  border: none;
+  border-radius: 15px;
+  padding: 0 30px;
+  height: 60px;
+  color: white;
+  font-weight: 700;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.find-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(16, 185, 129, 0.4);
+}
+
+.find-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Map */
+.map-container {
+  position: relative;
+  margin-bottom: 30px;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+#map {
+  height: 500px;
+  width: 100%;
+  border-radius: 18px;
+}
+
+.map-overlay {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 15px 20px;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+}
+
+/* Info Cards */
+.info-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 25px;
+  margin-bottom: 30px;
+}
+
+.info-card {
+  background: var(--card-bg);
+  padding: 25px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.info-card:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.card-header i {
+  font-size: 1.8rem;
+  color: var(--secondary);
+  background: rgba(16, 185, 129, 0.15);
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--light);
+}
+
+.card-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--light);
+  margin-bottom: 8px;
+  background: linear-gradient(45deg, var(--secondary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.card-label {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+/* Additional Info */
+.additional-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 25px;
+  border-radius: 18px;
+  margin-top: 25px;
+}
+
+.info-item {
+  text-align: center;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 15px;
+  transition: all 0.3s ease;
+}
+
+.info-item:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.info-item i {
+  font-size: 2rem;
+  color: var(--accent);
+  margin-bottom: 15px;
+  display: block;
+}
+
+.info-item .info-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--light);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.info-item small {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.95rem;
+}
+
+.info-btn {
+  background: var(--secondary);
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.3s ease;
+}
+
+.info-btn:hover {
+  background: var(--primary);
+  transform: translateY(-2px);
+}
+
+/* Loading */
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error */
+.error-notification {
+  position: fixed;
+  top: 25px;
+  right: 25px;
+  background: #ef4444;
+  color: white;
+  padding: 18px 25px;
+  border-radius: 12px;
+  z-index: 10000;
+  box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);
+  animation: slideInRight 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(10px);
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Theme Button */
+.theme-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: var(--secondary);
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.2rem;
+}
+
+/* Responsive */
+@media (max-width: 968px) {
+  .controls-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .find-btn {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 20px 15px;
+    margin: 10px;
+  }
+  
+  .title {
+    font-size: 2rem;
+  }
+  
+  .info-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .additional-info {
+    grid-template-columns: 1fr;
+  }
+  
+  #map {
+    height: 400px;
+  }
+  
+  .theme-btn {
+    top: 10px;
+    right: 10px;
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--secondary);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+</style>
+</head>
+<body>
+<button class="theme-btn" onclick="toggleTheme()">
+    <i class="fas fa-moon"></i>
+</button>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <i class="fas fa-plane-departure"></i>
+    </div>
+    <h1 class="title">Optimal Flight Route Finder</h1>
+    <div class="subtitle">Find the shortest path between airports</div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls-grid">
+    <div class="control-group">
+      <label class="control-label"><i class="fas fa-map-marker-alt"></i> Departure Airport</label>
+      <select id="source" style="width:100%">
+        <option value="MAA">MAA - Chennai International</option>
+        <option value="IXM">IXM - Madurai Airport</option>
+        <option value="SXV">SXV - Salem Airport</option>
+        <option value="BLR">BLR - Bangalore International</option>
+        <option value="HYD">HYD - Hyderabad Airport</option>
+        <option value="BOM">BOM - Mumbai International</option>
+        <option value="DEL">DEL - Delhi International</option>
+        <option value="JFK">JFK - New York (JFK)</option>
+        <option value="LAX">LAX - Los Angeles</option>
+        <option value="LHR">LHR - London Heathrow</option>
+        <option value="DXB">DXB - Dubai International</option>
+        <option value="SIN">SIN - Singapore Changi</option>
+        <option value="SYD">SYD - Sydney Airport</option>
+        <option value="SFO">SFO - San Francisco</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label class="control-label"><i class="fas fa-map-marker"></i> Destination Airport</label>
+      <select id="dest" style="width:100%">
+        <option value="DEL">DEL - Delhi International</option>
+        <option value="BOM">BOM - Mumbai International</option>
+        <option value="MAA">MAA - Chennai International</option>
+        <option value="IXM">IXM - Madurai Airport</option>
+        <option value="SXV">SXV - Salem Airport</option>
+        <option value="BLR">BLR - Bangalore International</option>
+        <option value="HYD">HYD - Hyderabad Airport</option>
+        <option value="JFK">JFK - New York (JFK)</option>
+        <option value="LAX">LAX - Los Angeles</option>
+        <option value="LHR">LHR - London Heathrow</option>
+        <option value="DXB">DXB - Dubai International</option>
+        <option value="SIN">SIN - Singapore Changi</option>
+        <option value="SYD">SYD - Sydney Airport</option>
+        <option value="SFO">SFO - San Francisco</option>
+      </select>
+    </div>
+
+    <button id="findBtn" class="find-btn">
+      <i class="fas fa-search"></i>
+      <span>Find Route</span>
+    </button>
+  </div>
+
+  <!-- Map -->
+  <div class="map-container">
+    <div id="map"></div>
+    <div class="map-overlay">
+      <i class="fas fa-info-circle"></i> Select airports to find optimal route
+    </div>
+  </div>
+
+  <!-- Info Cards -->
+  <div class="info-cards">
+    <div class="info-card">
+      <div class="card-header">
+        <i class="fas fa-route"></i>
+        <span class="card-title">Flight Path</span>
+      </div>
+      <div class="card-value" id="pathText">—</div>
+      <div class="card-label">Optimal route between airports</div>
+    </div>
+
+    <div class="info-card">
+      <div class="card-header">
+        <i class="fas fa-ruler-combined"></i>
+        <span class="card-title">Distance</span>
+      </div>
+      <div class="card-value" id="distanceText">— km</div>
+      <div class="card-label">Total flight distance</div>
+    </div>
+
+    <div class="info-card">
+      <div class="card-header">
+        <i class="fas fa-clock"></i>
+        <span class="card-title">Duration</span>
+      </div>
+      <div class="card-value" id="durationText">—</div>
+      <div class="card-label">Estimated flight time</div>
+    </div>
+  </div>
+
+  <!-- Additional Info -->
+  <div class="additional-info">
+    <div class="info-item">
+      <i class="fas fa-wind"></i>
+      <span class="info-title">Weather Info</span>
+      <small id="weatherText">Select route to see weather</small>
+    </div>
+    <div class="info-item">
+      <i class="fas fa-rupee-sign"></i>
+      <span class="info-title">Estimated Price</span>
+      <small id="priceText">—</small>
+    </div>
+    <div class="info-item">
+      <i class="fas fa-history"></i>
+      <span class="info-title">Recent Searches</span>
+      <small id="historyText">No searches yet</small>
+      <br>
+      <button class="info-btn" onclick="clearHistory()">
+        <i class="fas fa-trash"></i> Clear History
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Airport coordinates
+const AIRPORT_COORDS = {
+  "MAA":[13.0827,80.2707], "IXM":[9.9252,78.1198], "SXV":[11.6643,78.1460],
+  "BLR":[12.9716,77.5946], "HYD":[17.3850,78.4867], "BOM":[19.0760,72.8777],
+  "DEL":[28.6139,77.2090], "JFK":[40.6413,-73.7781], "LAX":[33.9416,-118.4085],
+  "LHR":[51.4700,-0.4543], "DXB":[25.2532,55.3657], "SIN":[1.3644,103.9915],
+  "SYD":[-33.9399,151.1753], "SFO":[37.6213,-122.3790]
+};
+
+// Weather data
+const WEATHER_DATA = {
+  "MAA": "32°C ☀️ Sunny", "DEL": "28°C ⛅ Partly Cloudy", "BOM": "30°C 💨 Humid",
+  "BLR": "27°C 🌤️ Pleasant", "HYD": "31°C ☀️ Clear", "IXM": "29°C ☀️ Sunny", 
+  "SXV": "28°C 💨 Breezy", "JFK": "15°C ❄️ Chilly", "LAX": "22°C ☀️ Sunny",
+  "LHR": "12°C 🌧️ Rainy", "DXB": "38°C ☀️ Hot", "SIN": "31°C ⛈️ Stormy",
+  "SYD": "20°C ☀️ Sunny", "SFO": "18°C 🌫️ Foggy"
+};
+
+// Initialize map
+const map = L.map('map').setView([20.5937,78.9629], 4);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© OpenStreetMap contributors'
+}).addTo(map);
+
+let activeGroup = null;
+let planeMarker = null;
+let trailLine = null;
+let animId = null;
+
+// Initialize Select2
+$(document).ready(function(){
+  $('#source, #dest').select2({ 
+    width: '100%', 
+    theme: 'default',
+    placeholder: "Select an airport",
+    allowClear: true
+  });
+  
+  // Load saved theme
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  if(savedTheme === 'light') {
+    $('.theme-btn i').removeClass('fa-moon').addClass('fa-sun');
+  }
+  
+  // Load search history
+  showHistory();
+});
+
+// Theme switching
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+  
+  // Update icon
+  $('.theme-btn i').toggleClass('fa-moon fa-sun');
+}
+
+// Search history functions
+function saveToHistory(source, destination) {
+  let history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+  history.unshift({
+    source: source, 
+    destination: destination, 
+    date: new Date().toLocaleTimeString()
+  });
+  localStorage.setItem('searchHistory', JSON.stringify(history.slice(0, 5)));
+}
+
+function showHistory() {
+  const history = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+  const historyText = history.length > 0 ? 
+    `${history.length} recent searches` : 'No searches yet';
+  $('#historyText').text(historyText);
+}
+
+function clearHistory() {
+  if(confirm('Are you sure you want to clear search history?')) {
+    localStorage.removeItem('searchHistory');
+    showHistory();
+  }
+}
+
+// Show error message
+function showError(message) {
+  const errorDiv = $(`
+    <div class="error-notification">
+      <i class="fas fa-exclamation-triangle"></i>
+      ${message}
+    </div>
+  `);
+  $('body').append(errorDiv);
+  setTimeout(() => errorDiv.remove(), 4000);
+}
+
+// Weather display
+function showWeather(airportCode) {
+  const weather = WEATHER_DATA[airportCode] || "Weather data not available";
+  $('#weatherText').text(weather);
+}
+
+// Price calculation
+function calculatePrice(distance) {
+  const pricePerKm = 12;
+  return Math.round(distance * pricePerKm);
+}
+
+// Calculate flight time
+function calculateFlightTime(distance, segments) {
+  const cruiseSpeed = 800;
+  const terminalTime = segments * 0.5;
+  const cruiseTime = distance / cruiseSpeed;
+  return cruiseTime + terminalTime;
+}
+
+function formatDuration(hours) {
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  return `${h}h ${m}m`;
+}
+
+// Find route click
+$('#findBtn').on('click', () => {
+  const src = $('#source').val();
+  const dst = $('#dest').val();
+  if(!src || !dst) return showError('Please select both source and destination airports');
+  if(src === dst) return showError('Source and destination cannot be the same');
+
+  $('#findBtn').prop('disabled', true).html('<span class="spinner"></span> Finding Route...');
+  
+  // Save to history
+  saveToHistory(src, dst);
+  showHistory();
+  
+  $.ajax({
+    url: 'http://localhost:5000/find_route',
+    method: 'POST',
+    contentType: 'application/json',
+    data: JSON.stringify({ source: src, destination: dst }),
+    success: function(res){
+      $('#findBtn').prop('disabled', false).html('<i class="fas fa-search"></i> Find Route');
+      renderRoute(res);
+    },
+    error: function(xhr){
+      $('#findBtn').prop('disabled', false).html('<i class="fas fa-search"></i> Find Route');
+      if (xhr.status === 0) {
+        showError('Backend server not running! Please run: python app.py');
+      } else {
+        const msg = xhr.responseJSON?.error || 'Server error occurred';
+        showError(msg);
+      }
+    }
+  });
+});
+
+// Render route
+function renderRoute(res){
+  const path = res.path;
+  const distance = res.distance;
+  
+  $('#pathText').text(path.join(' → '));
+  $('#distanceText').text(`${Math.round(distance)} km`);
+  
+  const duration = calculateFlightTime(distance, path.length);
+  $('#durationText').text(formatDuration(duration));
+  
+  const price = calculatePrice(distance);
+  $('#priceText').text(`₹${price.toLocaleString()}`);
+  
+  showWeather(path[0]);
+  
+  plotAndAnimate(path);
+}
+
+// Plot and animate
+function plotAndAnimate(path){
+  const coords = path.map(c => AIRPORT_COORDS[c]).filter(Boolean);
+  if(coords.length < 2){ showError('Not enough coordinates to plot'); return; }
+
+  // Clean previous
+  if(activeGroup) map.removeLayer(activeGroup);
+  if(trailLine) map.removeLayer(trailLine);
+  if(planeMarker) map.removeLayer(planeMarker);
+  if(animId) cancelAnimationFrame(animId);
+
+  // Create route line
+  const base = L.polyline(coords, {color:'rgba(0,255,213,0.06)', weight:12, opacity:0.8});
+  const bright = L.polyline(coords, {color:'#10b981', weight:4, opacity:0.95});
+  activeGroup = L.layerGroup([base, bright]).addTo(map);
+  map.fitBounds(bright.getBounds(), {padding:[40,40]});
+
+  // Create trail and plane
+  trailLine = L.polyline([coords[0]], {color:'#10b981', weight:3}).addTo(map);
+  const icon = L.icon({ 
+    iconUrl:'https://cdn-icons-png.flaticon.com/512/69/69524.png', 
+    iconSize:[36,36], 
+    iconAnchor:[18,18] 
+  });
+  planeMarker = L.marker(coords[0], {icon: icon}).addTo(map);
+
+  // Animate
+  const animSpeed = 0.008;
+  animateAlong(coords, animSpeed);
+}
+
+// Animate function
+function animateAlong(coords, speed){
+  let seg = 0;
+  let t = 0;
+
+  if(animId) cancelAnimationFrame(animId);
+
+  function step(){
+    if(seg >= coords.length - 1) return;
+    
+    const a = coords[seg];
+    const b = coords[seg+1];
+    const lat = a[0] + (b[0]-a[0]) * t;
+    const lng = a[1] + (b[1]-a[1]) * t;
+    planeMarker.setLatLng([lat,lng]);
+
+    // Rotate plane
+    const ang = bearingBetween(a[0], a[1], b[0], b[1]);
+    setRotation(planeMarker, ang);
+
+    // Update trail
+    const cur = trailLine.getLatLngs();
+    cur.push([lat,lng]);
+    trailLine.setLatLngs(cur);
+
+    t += speed;
+    if(t >= 1){
+      t = 0;
+      seg++;
+    }
+    animId = requestAnimationFrame(step);
+  }
+  animId = requestAnimationFrame(step);
+}
+
+// Helper functions
+function setRotation(marker, angle){
+  const el = marker.getElement();
+  if(!el) return;
+  el.style.transformOrigin = 'center';
+  el.style.transform = `rotate(${angle}deg)`;
+}
+
+function bearingBetween(lat1, lon1, lat2, lon2){
+  const y = Math.sin((lon2-lon1) * Math.PI/180) * Math.cos(lat2 * Math.PI/180);
+  const x = Math.cos(lat1 * Math.PI/180)*Math.sin(lat2*Math.PI/180) -
+            Math.sin(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.cos((lon2-lon1)*Math.PI/180);
+  const brng = Math.atan2(y,x) * 180/Math.PI;
+  return (brng + 360) % 360;
+}
+</script>
+</body>
+</html>
